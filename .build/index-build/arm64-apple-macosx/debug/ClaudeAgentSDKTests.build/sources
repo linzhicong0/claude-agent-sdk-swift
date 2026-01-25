@@ -1,0 +1,8 @@
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/ClaudeAgentSDKTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/ClientTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/ControlProtocolTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/MCPServerTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/MessageParserTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/StreamingTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/TransportTests.swift
+/Users/jacklin/Documents/git/claude-agent-sdk-swift/Tests/ClaudeAgentSDKTests/TypesTests.swift

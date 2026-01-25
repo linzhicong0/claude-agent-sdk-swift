@@ -1,0 +1,75 @@
+{
+  "": {
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/master.swiftdeps"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/ClaudeAgentSDK.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ClaudeAgentSDK.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ClaudeAgentSDK.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ClaudeAgentSDK~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ClaudeAgentSDK.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ClaudeAgentSDK.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/Client.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Client.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Client.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Client~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Client.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Client.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/ContentBlocks.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ContentBlocks.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ContentBlocks.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ContentBlocks~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ContentBlocks.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ContentBlocks.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/ControlProtocol.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ControlProtocol.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ControlProtocol.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ControlProtocol~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ControlProtocol.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/ControlProtocol.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/Errors.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Errors.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Errors.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Errors~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Errors.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Errors.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/MessageParser.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/MessageParser.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/MessageParser.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/MessageParser~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/MessageParser.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/MessageParser.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/Messages.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Messages.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Messages.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Messages~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Messages.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Messages.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/Options.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Options.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Options.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Options~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Options.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Options.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/SDKMCPServer.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/SDKMCPServer.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/SDKMCPServer.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/SDKMCPServer~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/SDKMCPServer.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/SDKMCPServer.dia"
+  },
+  "/Users/jacklin/Documents/git/claude-agent-sdk-swift/Sources/ClaudeAgentSDK/Transport.swift": {
+    "dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Transport.d",
+    "object": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Transport.swift.o",
+    "swiftmodule": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Transport~partial.swiftmodule",
+    "swift-dependencies": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Transport.swiftdeps",
+    "diagnostics": "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/Transport.dia"
+  }
+}
