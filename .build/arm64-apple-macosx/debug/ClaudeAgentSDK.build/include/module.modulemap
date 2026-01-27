@@ -1,3 +1,0 @@
-module ClaudeAgentSDK {
-    header "/Users/jacklin/Documents/git/claude-agent-sdk-swift/.build/arm64-apple-macosx/debug/ClaudeAgentSDK.build/include/ClaudeAgentSDK-Swift.h"
-}
