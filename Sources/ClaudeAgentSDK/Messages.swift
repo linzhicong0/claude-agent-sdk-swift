@@ -42,16 +42,16 @@ import Foundation
 public enum Message: Sendable {
     /// A message from the user
     case user(UserMessage)
-    
+
     /// A response from Claude
     case assistant(AssistantMessage)
-    
+
     /// A system-level event (e.g., initialization)
     case system(SystemMessage)
-    
+
     /// The final result of a conversation turn
     case result(ResultMessage)
-    
+
     /// A partial streaming event (when `includePartialMessages` is true)
     case streamEvent(StreamEvent)
 }
@@ -70,13 +70,13 @@ public enum Message: Sendable {
 public struct UserMessage: Sendable, Equatable {
     /// The content of the user message
     public let content: UserContent
-    
+
     /// Optional unique identifier for file checkpointing
     public let uuid: String?
-    
+
     /// If this message is a tool result, the ID of the corresponding tool use
     public let parentToolUseId: String?
-    
+
     /// Create a new user message
     /// - Parameters:
     ///   - content: The message content
@@ -97,7 +97,7 @@ public struct UserMessage: Sendable, Equatable {
 public enum UserContent: Sendable, Equatable {
     /// Plain text content
     case text(String)
-    
+
     /// Structured content blocks
     case blocks([ContentBlock])
 }
@@ -127,23 +127,26 @@ public enum UserContent: Sendable, Equatable {
 public struct AssistantMessage: Sendable, Equatable {
     /// The content blocks in this message
     public let content: [ContentBlock]
-    
+
     /// The model that generated this response
     public let model: String
-    
+
     /// For nested tool contexts, the parent tool use ID
     public let parentToolUseId: String?
-    
+
     /// Error information if the response failed
     public let error: AssistantMessageError?
-    
+
     /// Create a new assistant message
     /// - Parameters:
     ///   - content: Array of content blocks
     ///   - model: Model identifier
     ///   - parentToolUseId: Optional parent tool use ID
     ///   - error: Optional error information
-    public init(content: [ContentBlock], model: String, parentToolUseId: String? = nil, error: AssistantMessageError? = nil) {
+    public init(
+        content: [ContentBlock], model: String, parentToolUseId: String? = nil,
+        error: AssistantMessageError? = nil
+    ) {
         self.content = content
         self.model = model
         self.parentToolUseId = parentToolUseId
@@ -161,10 +164,10 @@ public struct AssistantMessage: Sendable, Equatable {
 public struct AssistantMessageError: Sendable, Equatable, Codable {
     /// The error type (e.g., "rate_limit", "authentication_failed", "server_error")
     public let type: String
-    
+
     /// Human-readable error message
     public let message: String
-    
+
     /// Create a new assistant message error
     /// - Parameters:
     ///   - type: The error type identifier
@@ -185,10 +188,10 @@ public struct AssistantMessageError: Sendable, Equatable, Codable {
 public struct SystemMessage: Sendable, Equatable {
     /// The type of system event (e.g., "init")
     public let subtype: String
-    
+
     /// Additional data associated with the event
     public let data: [String: AnyCodable]
-    
+
     /// Create a new system message
     /// - Parameters:
     ///   - subtype: The system event type
@@ -203,12 +206,15 @@ public struct SystemMessage: Sendable, Equatable {
 
 /// The subtype of a result message indicating how the conversation ended.
 public enum ResultSubtype: String, Sendable, Codable {
-    /// The conversation completed successfully
+    /// The conversation completed successfully (API variant)
+    case success
+
+    /// The conversation completed successfully (legacy)
     case done
-    
+
     /// The conversation ended with an error
     case error
-    
+
     /// The conversation was interrupted by the user
     case interrupted
 }
@@ -233,31 +239,31 @@ public enum ResultSubtype: String, Sendable, Codable {
 public struct ResultMessage: Sendable, Equatable {
     /// How the conversation ended
     public let subtype: ResultSubtype
-    
+
     /// Total wall-clock duration in milliseconds
     public let durationMs: Int
-    
+
     /// Time spent in API calls in milliseconds
     public let durationApiMs: Int
-    
+
     /// Whether an error occurred
     public let isError: Bool
-    
+
     /// Number of conversation turns
     public let numTurns: Int
-    
+
     /// The session identifier
     public let sessionId: String
-    
+
     /// Estimated cost in USD (may be nil)
     public let totalCostUSD: Double?
-    
+
     /// Detailed token usage statistics
     public let usage: [String: AnyCodable]?
-    
+
     /// Parsed structured output when using JSON schema
     public let structuredOutput: AnyCodable?
-    
+
     /// Create a new result message
     public init(
         subtype: ResultSubtype,
@@ -298,23 +304,25 @@ public struct ResultMessage: Sendable, Equatable {
 public struct StreamEvent: Sendable, Equatable {
     /// Unique identifier for this event
     public let uuid: String
-    
+
     /// The session identifier
     public let sessionId: String
-    
+
     /// The raw Anthropic API event data
     public let event: [String: AnyCodable]
-    
+
     /// For nested tool contexts, the parent tool use ID
     public let parentToolUseId: String?
-    
+
     /// Create a new stream event
     /// - Parameters:
     ///   - uuid: Unique event identifier
     ///   - sessionId: Session identifier
     ///   - event: Raw API event data
     ///   - parentToolUseId: Optional parent tool use ID
-    public init(uuid: String, sessionId: String, event: [String: AnyCodable], parentToolUseId: String? = nil) {
+    public init(
+        uuid: String, sessionId: String, event: [String: AnyCodable], parentToolUseId: String? = nil
+    ) {
         self.uuid = uuid
         self.sessionId = sessionId
         self.event = event
@@ -343,11 +351,11 @@ extension Message: Codable {
     private enum CodingKeys: String, CodingKey {
         case type
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let type = try container.decode(String.self, forKey: .type)
-        
+
         switch type {
         case "user":
             self = .user(try UserMessage(from: decoder))
@@ -367,7 +375,7 @@ extension Message: Codable {
             )
         }
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
@@ -398,37 +406,39 @@ extension UserMessage: Codable {
         case uuid
         case parentToolUseId = "parent_tool_use_id"
     }
-    
+
     private enum MessageKeys: String, CodingKey {
         case content
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let messageContainer = try container.nestedContainer(keyedBy: MessageKeys.self, forKey: .message)
-        
+        let messageContainer = try container.nestedContainer(
+            keyedBy: MessageKeys.self, forKey: .message)
+
         // Try string first, then blocks
         if let text = try? messageContainer.decode(String.self, forKey: .content) {
             content = .text(text)
         } else {
             content = .blocks(try messageContainer.decode([ContentBlock].self, forKey: .content))
         }
-        
+
         uuid = try container.decodeIfPresent(String.self, forKey: .uuid)
         parentToolUseId = try container.decodeIfPresent(String.self, forKey: .parentToolUseId)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        var messageContainer = container.nestedContainer(keyedBy: MessageKeys.self, forKey: .message)
-        
+        var messageContainer = container.nestedContainer(
+            keyedBy: MessageKeys.self, forKey: .message)
+
         switch content {
         case .text(let text):
             try messageContainer.encode(text, forKey: .content)
         case .blocks(let blocks):
             try messageContainer.encode(blocks, forKey: .content)
         }
-        
+
         try container.encodeIfPresent(uuid, forKey: .uuid)
         try container.encodeIfPresent(parentToolUseId, forKey: .parentToolUseId)
     }
@@ -445,7 +455,7 @@ extension UserContent: Codable {
             self = .blocks(try container.decode([ContentBlock].self))
         }
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -466,25 +476,27 @@ extension AssistantMessage: Codable {
         case parentToolUseId = "parent_tool_use_id"
         case error
     }
-    
+
     private enum MessageKeys: String, CodingKey {
         case content
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let messageContainer = try container.nestedContainer(keyedBy: MessageKeys.self, forKey: .message)
-        
+        let messageContainer = try container.nestedContainer(
+            keyedBy: MessageKeys.self, forKey: .message)
+
         content = try messageContainer.decode([ContentBlock].self, forKey: .content)
         model = try container.decode(String.self, forKey: .model)
         parentToolUseId = try container.decodeIfPresent(String.self, forKey: .parentToolUseId)
         error = try container.decodeIfPresent(AssistantMessageError.self, forKey: .error)
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        var messageContainer = container.nestedContainer(keyedBy: MessageKeys.self, forKey: .message)
-        
+        var messageContainer = container.nestedContainer(
+            keyedBy: MessageKeys.self, forKey: .message)
+
         try messageContainer.encode(content, forKey: .content)
         try container.encode(model, forKey: .model)
         try container.encodeIfPresent(parentToolUseId, forKey: .parentToolUseId)
@@ -498,24 +510,25 @@ extension SystemMessage: Codable {
     private enum CodingKeys: String, CodingKey {
         case subtype
     }
-    
+
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         subtype = try container.decode(String.self, forKey: .subtype)
-        
+
         // Decode remaining keys as data
         let allContainer = try decoder.container(keyedBy: DynamicCodingKey.self)
         var data: [String: AnyCodable] = [:]
-        for key in allContainer.allKeys where key.stringValue != "type" && key.stringValue != "subtype" {
+        for key in allContainer.allKeys
+        where key.stringValue != "type" && key.stringValue != "subtype" {
             data[key.stringValue] = try allContainer.decode(AnyCodable.self, forKey: key)
         }
         self.data = data
     }
-    
+
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(subtype, forKey: .subtype)
-        
+
         var dataContainer = encoder.container(keyedBy: DynamicCodingKey.self)
         for (key, value) in data {
             try dataContainer.encode(value, forKey: DynamicCodingKey(stringValue: key)!)
@@ -555,12 +568,12 @@ extension StreamEvent: Codable {
 private struct DynamicCodingKey: CodingKey {
     var stringValue: String
     var intValue: Int?
-    
+
     init?(stringValue: String) {
         self.stringValue = stringValue
         self.intValue = nil
     }
-    
+
     init?(intValue: Int) {
         self.stringValue = "\(intValue)"
         self.intValue = intValue
@@ -582,7 +595,7 @@ extension AssistantMessage {
             return nil
         }.joined()
     }
-    
+
     /// Get all tool use blocks from the message.
     ///
     /// Returns an array of tool use requests that Claude is making.
@@ -594,7 +607,7 @@ extension AssistantMessage {
             return nil
         }
     }
-    
+
     /// Get all thinking blocks from the message.
     ///
     /// Returns an array of thinking blocks showing Claude's reasoning.
@@ -633,17 +646,17 @@ extension ResultMessage {
     public var durationSeconds: Double {
         Double(durationMs) / 1000.0
     }
-    
+
     /// The API duration in seconds.
     public var durationApiSeconds: Double {
         Double(durationApiMs) / 1000.0
     }
-    
+
     /// Get input token count from usage.
     public var inputTokens: Int? {
         usage?["input_tokens"]?.intValue
     }
-    
+
     /// Get output token count from usage.
     public var outputTokens: Int? {
         usage?["output_tokens"]?.intValue

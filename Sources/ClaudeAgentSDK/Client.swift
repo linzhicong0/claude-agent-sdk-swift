@@ -43,16 +43,18 @@ public func query(
     prompt: String,
     options: ClaudeAgentOptions = ClaudeAgentOptions()
 ) -> AsyncThrowingStream<Message, Error> {
-    
+
     // Validate options
     if options.canUseTool != nil {
         return AsyncThrowingStream { continuation in
-            continuation.finish(throwing: ClaudeSDKError.configurationError(
-                reason: "canUseTool callback requires streaming mode. Use ClaudeSDKClient instead."
-            ))
+            continuation.finish(
+                throwing: ClaudeSDKError.configurationError(
+                    reason:
+                        "canUseTool callback requires streaming mode. Use ClaudeSDKClient instead."
+                ))
         }
     }
-    
+
     return AsyncThrowingStream { continuation in
         Task {
             do {
@@ -61,28 +63,28 @@ public func query(
                     options: options,
                     isStreamingMode: false
                 )
-                
+
                 // Connect to CLI
                 try await transport.connect()
-                
+
                 // Ensure cleanup on exit
                 defer {
                     Task {
                         await transport.close()
                     }
                 }
-                
+
                 // Read and parse messages
                 for try await data in await transport.readMessages() {
                     // Skip control messages in simple mode
                     if isControlMessage(data) {
                         continue
                     }
-                    
+
                     let message = try MessageParser.parse(data)
                     continuation.yield(message)
                 }
-                
+
                 continuation.finish()
             } catch {
                 continuation.finish(throwing: error)
@@ -143,9 +145,9 @@ public func query(
 /// await client.close()
 /// ```
 public actor ClaudeSDKClient {
-    
+
     // MARK: - Properties
-    
+
     private let options: ClaudeAgentOptions
     private var transport: SubprocessCLITransport?
     private var controlProtocol: ControlProtocol?
@@ -153,13 +155,13 @@ public actor ClaudeSDKClient {
     private var isConnected = false
     private var readTask: Task<Void, Never>?
     private var initInfo: [String: Any]?
-    
+
     /// Message channel for filtered SDK messages
     private var messageChannel: AsyncStream<Message>.Continuation?
     private var pendingMessages: [Message] = []
-    
+
     // MARK: - Initialization
-    
+
     /// Create a new Claude SDK client.
     ///
     /// The client is not connected after initialization. Call ``connect()``
@@ -169,9 +171,9 @@ public actor ClaudeSDKClient {
     public init(options: ClaudeAgentOptions = ClaudeAgentOptions()) {
         self.options = options
     }
-    
+
     // MARK: - Connection
-    
+
     /// Connect to the Claude CLI and initialize the control protocol.
     ///
     /// This must be called before sending queries. The connection establishes
@@ -183,29 +185,30 @@ public actor ClaudeSDKClient {
         guard !isConnected else {
             throw ClaudeSDKError.configurationError(reason: "Already connected")
         }
-        
+
         // Create transport in streaming mode
         let transport = SubprocessCLITransport(
             prompt: nil,
             options: options,
             isStreamingMode: true
         )
-        
+
         try await transport.connect()
         self.transport = transport
-        
+
         // Create control protocol handler
         let protocol_ = ControlProtocol(transport: transport, options: options)
         self.controlProtocol = protocol_
-        
-        // Initialize control protocol and store init info
+
+        // Initialize control protocol
+        // The protocol's sendControlRequest handles reading responses internally
         self.initInfo = try await protocol_.initialize()
-        
+
         isConnected = true
     }
-    
+
     // MARK: - Querying
-    
+
     /// Send a user query to Claude.
     ///
     /// The query is sent to the CLI and responses will be available through
@@ -217,24 +220,24 @@ public actor ClaudeSDKClient {
         guard let transport = transport, isConnected else {
             throw ClaudeSDKError.configurationError(reason: "Not connected. Call connect() first.")
         }
-        
+
         let userMessage: [String: Any] = [
             "type": "user",
             "message": [
                 "role": "user",
-                "content": prompt
+                "content": prompt,
             ],
-            "session_id": "default"
+            "session_id": "default",
         ]
-        
+
         let jsonData = try JSONSerialization.data(withJSONObject: userMessage)
         guard let jsonString = String(data: jsonData, encoding: .utf8) else {
             throw ClaudeSDKError.writeError(reason: "Failed to serialize user message")
         }
-        
+
         try await transport.write(jsonString)
     }
-    
+
     /// Receive messages from Claude.
     ///
     /// Returns an async stream of all messages. This stream continues
@@ -247,11 +250,22 @@ public actor ClaudeSDKClient {
             Task {
                 do {
                     guard let transport = await self.transport,
-                          let protocol_ = await self.controlProtocol else {
-                        continuation.finish(throwing: ClaudeSDKError.configurationError(reason: "Not connected"))
+                        let protocol_ = await self.controlProtocol
+                    else {
+                        continuation.finish(
+                            throwing: ClaudeSDKError.configurationError(reason: "Not connected"))
                         return
                     }
-                    
+
+                    // First, yield any messages that were buffered during initialization
+                    let buffered = await protocol_.drainBufferedMessages()
+                    for data in buffered {
+                        if let sdkMessage = try await protocol_.routeMessage(data) {
+                            let message = try MessageParser.parse(sdkMessage)
+                            continuation.yield(message)
+                        }
+                    }
+
                     for try await data in await transport.readMessages() {
                         // Route through control protocol
                         if let sdkMessage = try await protocol_.routeMessage(data) {
@@ -266,7 +280,7 @@ public actor ClaudeSDKClient {
             }
         }
     }
-    
+
     /// Receive messages until a result message is received.
     ///
     /// This is useful for single-turn interactions where you want to
@@ -296,17 +310,34 @@ public actor ClaudeSDKClient {
             Task {
                 do {
                     guard let transport = await self.transport,
-                          let protocol_ = await self.controlProtocol else {
-                        continuation.finish(throwing: ClaudeSDKError.configurationError(reason: "Not connected"))
+                        let protocol_ = await self.controlProtocol
+                    else {
+                        continuation.finish(
+                            throwing: ClaudeSDKError.configurationError(reason: "Not connected"))
                         return
                     }
-                    
+
+                    // First, yield any messages that were buffered during initialization
+                    let buffered = await protocol_.drainBufferedMessages()
+                    for data in buffered {
+                        if let sdkMessage = try await protocol_.routeMessage(data) {
+                            let message = try MessageParser.parse(sdkMessage)
+                            continuation.yield(message)
+
+                            // Stop after result message
+                            if case .result = message {
+                                continuation.finish()
+                                return
+                            }
+                        }
+                    }
+
                     for try await data in await transport.readMessages() {
                         // Route through control protocol
                         if let sdkMessage = try await protocol_.routeMessage(data) {
                             let message = try MessageParser.parse(sdkMessage)
                             continuation.yield(message)
-                            
+
                             // Stop after result message
                             if case .result = message {
                                 break
@@ -320,9 +351,9 @@ public actor ClaudeSDKClient {
             }
         }
     }
-    
+
     // MARK: - Initialization Info
-    
+
     /// Get the initialization information from the control protocol.
     ///
     /// This contains information about the session, capabilities, and
@@ -332,9 +363,9 @@ public actor ClaudeSDKClient {
     public func getInitInfo() -> [String: Any]? {
         return initInfo
     }
-    
+
     // MARK: - Control Protocol Methods
-    
+
     /// Interrupt the current operation.
     ///
     /// Sends an interrupt signal to stop the current conversation turn.
@@ -347,7 +378,7 @@ public actor ClaudeSDKClient {
         }
         try await protocol_.interrupt()
     }
-    
+
     /// Change the model mid-conversation.
     ///
     /// Dynamically switch to a different Claude model. This takes effect
@@ -361,7 +392,7 @@ public actor ClaudeSDKClient {
         }
         try await protocol_.setModel(model)
     }
-    
+
     /// Change the permission mode dynamically.
     ///
     /// Adjust the permission mode for tool execution. This affects how
@@ -375,7 +406,7 @@ public actor ClaudeSDKClient {
         }
         try await protocol_.setPermissionMode(mode)
     }
-    
+
     /// Rewind files to a checkpoint.
     ///
     /// When file checkpointing is enabled, this restores files to the state
@@ -390,9 +421,32 @@ public actor ClaudeSDKClient {
         }
         try await protocol_.rewindFiles(to: checkpointId)
     }
-    
+
+    /// Get MCP server connection status.
+    ///
+    /// Query the current status of all MCP server connections.
+    ///
+    /// - Returns: A dictionary containing MCP status information
+    /// - Throws: ``ClaudeSDKError/configurationError(reason:)`` if not connected
+    public func getMcpStatus() async throws -> [String: Any] {
+        guard let protocol_ = controlProtocol else {
+            throw ClaudeSDKError.configurationError(reason: "Not connected")
+        }
+        return try await protocol_.getMcpStatus()
+    }
+
+    /// Get server initialization information.
+    ///
+    /// Returns information about the connected CLI server including
+    /// supported commands, output styles, and capabilities.
+    ///
+    /// - Returns: The server info dictionary, or nil if not connected
+    public func getServerInfo() async -> [String: Any]? {
+        return initInfo
+    }
+
     // MARK: - Cleanup
-    
+
     /// Close the client and cleanup resources.
     ///
     /// This terminates the CLI process and releases all resources.
@@ -400,17 +454,17 @@ public actor ClaudeSDKClient {
     public func close() async {
         readTask?.cancel()
         readTask = nil
-        
+
         if let transport = transport {
             await transport.close()
         }
-        
+
         transport = nil
         controlProtocol = nil
         initInfo = nil
         isConnected = false
     }
-    
+
     /// Check if the client is connected.
     public var connected: Bool {
         isConnected
@@ -420,7 +474,7 @@ public actor ClaudeSDKClient {
 // MARK: - Convenience Extensions
 
 extension ClaudeSDKClient {
-    
+
     /// Connect, query, receive all messages until result, and close.
     ///
     /// This is a convenience method for simple single-turn interactions
@@ -442,17 +496,17 @@ extension ClaudeSDKClient {
     public func runQuery(prompt: String) async throws -> [Message] {
         try await connect()
         defer { Task { await close() } }
-        
+
         try await query(prompt: prompt)
-        
+
         var messages: [Message] = []
         for try await message in receiveUntilResult() {
             messages.append(message)
         }
-        
+
         return messages
     }
-    
+
     /// Get the last result message from an array of messages.
     ///
     /// - Parameter messages: Array of messages to search
@@ -465,7 +519,7 @@ extension ClaudeSDKClient {
         }
         return nil
     }
-    
+
     /// Get all assistant messages from an array of messages.
     ///
     /// - Parameter messages: Array of messages to filter
@@ -478,7 +532,7 @@ extension ClaudeSDKClient {
             return nil
         }
     }
-    
+
     /// Get the combined text content from all assistant messages.
     ///
     /// - Parameter messages: Array of messages to process

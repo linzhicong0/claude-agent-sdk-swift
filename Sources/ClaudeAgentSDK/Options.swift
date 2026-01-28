@@ -14,13 +14,13 @@ import Foundation
 public enum PermissionMode: String, Sendable, Codable {
     /// Default mode - CLI prompts for dangerous tool calls
     case `default` = "default"
-    
+
     /// Auto-accept file edits without prompting
     case acceptEdits = "acceptEdits"
-    
+
     /// Planning mode - Claude explains actions without executing
     case plan = "plan"
-    
+
     /// Bypass all permission prompts (use with caution!)
     case bypassPermissions = "bypassPermissions"
 }
@@ -31,7 +31,7 @@ public enum PermissionMode: String, Sendable, Codable {
 public enum ToolsPreset: String, Sendable {
     /// Default set of tools
     case `default` = "default"
-    
+
     /// No tools enabled
     case none = ""
 }
@@ -50,19 +50,19 @@ public enum SystemPromptPreset: String, Sendable {
 public enum HookEvent: String, Sendable, Codable, Hashable {
     /// Triggered before a tool is executed
     case preToolUse = "PreToolUse"
-    
+
     /// Triggered after a tool is executed
     case postToolUse = "PostToolUse"
-    
+
     /// Triggered when the user submits a prompt
     case userPromptSubmit = "UserPromptSubmit"
-    
+
     /// Triggered when the session stops
     case stop = "Stop"
-    
+
     /// Triggered when a subagent stops
     case subagentStop = "SubagentStop"
-    
+
     /// Triggered before context compaction
     case preCompact = "PreCompact"
 }
@@ -70,12 +70,16 @@ public enum HookEvent: String, Sendable, Codable, Hashable {
 // MARK: - Beta Features
 
 /// SDK beta features that can be enabled.
+/// See https://docs.anthropic.com/en/api/beta-headers
 public enum SdkBeta: String, Sendable, Codable {
     /// Interleaved thinking - show Claude's reasoning
     case interleaved_thinking
-    
+
     /// Output schema - structured JSON output
     case output_schema
+
+    /// Extended context window (1M tokens)
+    case context_1m_2025_08_07 = "context-1m-2025-08-07"
 }
 
 // MARK: - Setting Sources
@@ -84,13 +88,13 @@ public enum SdkBeta: String, Sendable, Codable {
 public enum SettingSource: String, Sendable, Codable {
     /// User-level settings
     case userSettings
-    
+
     /// Project-level settings
     case projectSettings
-    
+
     /// Local (gitignored) settings
     case localSettings
-    
+
     /// Session-only settings
     case session
 }
@@ -103,19 +107,21 @@ public enum SettingSource: String, Sendable, Codable {
 public enum PermissionResult: Sendable {
     /// Allow the tool to execute
     case allow(updatedInput: [String: Any]?, updatedPermissions: [PermissionUpdate]?)
-    
+
     /// Deny the tool execution
     case deny(message: String, interrupt: Bool)
-    
+
     /// Create an allow result.
     ///
     /// - Parameters:
     ///   - updatedInput: Optionally modify the tool input
     ///   - updatedPermissions: Optionally update permission rules
-    public static func allowTool(updatedInput: [String: Any]? = nil, updatedPermissions: [PermissionUpdate]? = nil) -> PermissionResult {
+    public static func allowTool(
+        updatedInput: [String: Any]? = nil, updatedPermissions: [PermissionUpdate]? = nil
+    ) -> PermissionResult {
         .allow(updatedInput: updatedInput, updatedPermissions: updatedPermissions)
     }
-    
+
     /// Create a deny result.
     ///
     /// - Parameters:
@@ -130,10 +136,10 @@ public enum PermissionResult: Sendable {
 public struct PermissionUpdate: Sendable {
     /// The tool name to update
     public let toolName: String
-    
+
     /// The permission rule ("allow", "deny", "ask")
     public let permission: String
-    
+
     public init(toolName: String, permission: String) {
         self.toolName = toolName
         self.permission = permission
@@ -146,14 +152,17 @@ public struct PermissionUpdate: Sendable {
 public struct ToolPermissionContext: Sendable {
     /// The current session ID
     public let sessionId: String
-    
+
     /// Optional abort controller for cancellation
     public let abortController: AbortController?
-    
+
     /// Timestamps of files read (for checkpointing)
     public let readFileTimestamps: [String: Date]?
-    
-    public init(sessionId: String, abortController: AbortController? = nil, readFileTimestamps: [String: Date]? = nil) {
+
+    public init(
+        sessionId: String, abortController: AbortController? = nil,
+        readFileTimestamps: [String: Date]? = nil
+    ) {
         self.sessionId = sessionId
         self.abortController = abortController
         self.readFileTimestamps = readFileTimestamps
@@ -164,21 +173,21 @@ public struct ToolPermissionContext: Sendable {
 public final class AbortController: @unchecked Sendable {
     private var _isAborted = false
     private let lock = NSLock()
-    
+
     /// Whether the operation has been aborted.
     public var isAborted: Bool {
         lock.lock()
         defer { lock.unlock() }
         return _isAborted
     }
-    
+
     /// Signal an abort.
     public func abort() {
         lock.lock()
         defer { lock.unlock() }
         _isAborted = true
     }
-    
+
     public init() {}
 }
 
@@ -186,11 +195,12 @@ public final class AbortController: @unchecked Sendable {
 ///
 /// Called when Claude requests to use a tool. Return ``PermissionResult/allowTool(updatedInput:updatedPermissions:)``
 /// or ``PermissionResult/denyTool(message:interrupt:)`` to control execution.
-public typealias CanUseTool = @Sendable (
-    _ toolName: String,
-    _ input: [String: Any],
-    _ context: ToolPermissionContext
-) async throws -> PermissionResult
+public typealias CanUseTool =
+    @Sendable (
+        _ toolName: String,
+        _ input: [String: Any],
+        _ context: ToolPermissionContext
+    ) async throws -> PermissionResult
 
 // MARK: - Hook Types
 
@@ -198,22 +208,22 @@ public typealias CanUseTool = @Sendable (
 public struct HookInput: Sendable {
     /// The hook event type
     public let hookEventName: HookEvent
-    
+
     /// Tool name (for tool-related hooks)
     public let toolName: String?
-    
+
     /// Tool input (for PreToolUse)
     public let toolInput: [String: AnyCodable]?
-    
+
     /// Tool output (for PostToolUse)
     public let toolOutput: AnyCodable?
-    
+
     /// User prompt (for UserPromptSubmit)
     public let prompt: String?
-    
+
     /// Stop reason (for Stop hooks)
     public let stopReason: String?
-    
+
     public init(
         hookEventName: HookEvent,
         toolName: String? = nil,
@@ -235,10 +245,10 @@ public struct HookInput: Sendable {
 public struct HookContext: Sendable {
     /// The current session ID
     public let sessionId: String
-    
+
     /// Optional abort controller for cancellation
     public let abortController: AbortController?
-    
+
     public init(sessionId: String, abortController: AbortController? = nil) {
         self.sessionId = sessionId
         self.abortController = abortController
@@ -249,25 +259,25 @@ public struct HookContext: Sendable {
 public struct HookOutput: Sendable {
     /// Whether to continue execution (default true)
     public let shouldContinue: Bool
-    
+
     /// Whether to hide output from transcript
     public let suppressOutput: Bool
-    
+
     /// Custom stop reason
     public let stopReason: String?
-    
+
     /// Decision to block execution
     public let decision: HookDecision?
-    
+
     /// System message to send to Claude
     public let systemMessage: String?
-    
+
     /// Reason for the decision
     public let reason: String?
-    
+
     /// Event-specific output data
     public let hookSpecificOutput: HookSpecificOutput?
-    
+
     public init(
         shouldContinue: Bool = true,
         suppressOutput: Bool = false,
@@ -291,39 +301,107 @@ public struct HookOutput: Sendable {
 public enum HookDecision: String, Sendable {
     /// Block the operation
     case block
+
+    /// Allow the operation
+    case allow
+
+    /// Deny the operation
+    case deny
+
+    /// Ask for permission (default behavior)
+    case ask
 }
 
-/// Hook-specific output data.
+/// Hook-specific output data for PreToolUse events.
+public struct PreToolUseHookSpecificOutput: Sendable {
+    public let hookEventName: HookEvent = .preToolUse
+
+    /// Permission decision: "allow", "deny", or "ask"
+    public let permissionDecision: String?
+
+    /// Reason for the permission decision
+    public let permissionDecisionReason: String?
+
+    /// Updated input to use for the tool call
+    public let updatedInput: [String: Any]?
+
+    public init(
+        permissionDecision: String? = nil,
+        permissionDecisionReason: String? = nil,
+        updatedInput: [String: Any]? = nil
+    ) {
+        self.permissionDecision = permissionDecision
+        self.permissionDecisionReason = permissionDecisionReason
+        self.updatedInput = updatedInput
+    }
+}
+
+/// Hook-specific output data for PostToolUse events.
+public struct PostToolUseHookSpecificOutput: Sendable {
+    public let hookEventName: HookEvent = .postToolUse
+
+    /// Additional context to provide to Claude
+    public let additionalContext: String?
+
+    public init(additionalContext: String? = nil) {
+        self.additionalContext = additionalContext
+    }
+}
+
+/// Hook-specific output data for UserPromptSubmit events.
+public struct UserPromptSubmitHookSpecificOutput: Sendable {
+    public let hookEventName: HookEvent = .userPromptSubmit
+
+    /// Additional context to provide to Claude
+    public let additionalContext: String?
+
+    public init(additionalContext: String? = nil) {
+        self.additionalContext = additionalContext
+    }
+}
+
+/// Hook-specific output data (legacy, for backward compatibility).
 public struct HookSpecificOutput: Sendable {
     public let hookEventName: HookEvent
     public let permissionDecision: String?
     public let permissionDecisionReason: String?
-    
-    public init(hookEventName: HookEvent, permissionDecision: String? = nil, permissionDecisionReason: String? = nil) {
+    public let additionalContext: String?
+    public let updatedInput: [String: Any]?
+
+    public init(
+        hookEventName: HookEvent,
+        permissionDecision: String? = nil,
+        permissionDecisionReason: String? = nil,
+        additionalContext: String? = nil,
+        updatedInput: [String: Any]? = nil
+    ) {
         self.hookEventName = hookEventName
         self.permissionDecision = permissionDecision
         self.permissionDecisionReason = permissionDecisionReason
+        self.additionalContext = additionalContext
+        self.updatedInput = updatedInput
     }
 }
 
 /// Hook callback type.
-public typealias HookCallback = @Sendable (
-    _ input: HookInput,
-    _ toolUseId: String?,
-    _ context: HookContext
-) async throws -> HookOutput
+public typealias HookCallback =
+    @Sendable (
+        _ input: HookInput,
+        _ toolUseId: String?,
+        _ context: HookContext
+    ) async throws -> HookOutput
 
 /// Hook matcher for filtering hooks by tool pattern.
 public struct HookMatcher: Sendable {
     /// Pattern to match tool names (supports regex-like patterns)
     public let matcher: String?
-    
+
     /// Callbacks to execute when matched
     public let hooks: [HookCallback]
-    
+
     /// Timeout for hook execution in seconds
     public let timeout: TimeInterval?
-    
+
     public init(matcher: String? = nil, hooks: [HookCallback], timeout: TimeInterval? = nil) {
         self.matcher = matcher
         self.hooks = hooks
@@ -337,7 +415,7 @@ public struct HookMatcher: Sendable {
 public enum MCPServerConfig: Sendable {
     /// External MCP server process
     case external(ExternalMCPServerConfig)
-    
+
     /// SDK-embedded MCP server
     case sdkServer(SDKMCPServer)
 }
@@ -346,17 +424,19 @@ public enum MCPServerConfig: Sendable {
 public struct ExternalMCPServerConfig: Sendable, Codable {
     /// Command to run (e.g., "npx")
     public let command: String
-    
+
     /// Command arguments
     public let args: [String]?
-    
+
     /// Environment variables
     public let env: [String: String]?
-    
+
     /// Working directory
     public let cwd: String?
-    
-    public init(command: String, args: [String]? = nil, env: [String: String]? = nil, cwd: String? = nil) {
+
+    public init(
+        command: String, args: [String]? = nil, env: [String: String]? = nil, cwd: String? = nil
+    ) {
         self.command = command
         self.args = args
         self.env = env
@@ -370,22 +450,22 @@ public struct ExternalMCPServerConfig: Sendable, Codable {
 public struct AgentDefinition: Sendable, Codable {
     /// Model to use for this agent
     public let model: String?
-    
+
     /// System prompt for this agent
     public let systemPrompt: String?
-    
+
     /// Tools available to this agent
     public let tools: [String]?
-    
+
     /// Additional allowed tools
     public let allowedTools: [String]?
-    
+
     /// Tools to disallow
     public let disallowedTools: [String]?
-    
+
     /// Maximum conversation turns
     public let maxTurns: Int?
-    
+
     public init(
         model: String? = nil,
         systemPrompt: String? = nil,
@@ -401,7 +481,7 @@ public struct AgentDefinition: Sendable, Codable {
         self.disallowedTools = disallowedTools
         self.maxTurns = maxTurns
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case model
         case systemPrompt = "system_prompt"
@@ -418,10 +498,10 @@ public struct AgentDefinition: Sendable, Codable {
 public struct SandboxSettings: Sendable, Codable {
     /// Sandbox type
     public let type: SandboxType
-    
+
     /// Additional options
     public let options: [String: AnyCodable]?
-    
+
     public init(type: SandboxType, options: [String: AnyCodable]? = nil) {
         self.type = type
         self.options = options
@@ -432,7 +512,7 @@ public struct SandboxSettings: Sendable, Codable {
 public enum SandboxType: String, Sendable, Codable {
     /// Docker container sandbox
     case docker
-    
+
     /// No sandboxing
     case none
 }
@@ -441,19 +521,19 @@ public enum SandboxType: String, Sendable, Codable {
 public struct NetworkPermissions: Sendable, Codable {
     /// Unix socket paths to allow
     public let unixSocketPaths: [String]?
-    
+
     /// Allow all socket connections
     public let allowAllSockets: Bool?
-    
+
     /// Allow binding to localhost
     public let allowLocalhostBinding: Bool?
-    
+
     /// Outbound hosts to allow
     public let outboundHosts: [String]?
-    
+
     /// Outbound hosts to deny
     public let outboundDenyHosts: [String]?
-    
+
     public init(
         unixSocketPaths: [String]? = nil,
         allowAllSockets: Bool? = nil,
@@ -475,7 +555,7 @@ public struct NetworkPermissions: Sendable, Codable {
 public struct PluginConfig: Sendable, Codable {
     /// Path to the plugin directory
     public let path: String
-    
+
     public init(path: String) {
         self.path = path
     }
@@ -505,133 +585,133 @@ public struct PluginConfig: Sendable, Codable {
 /// ```
 public struct ClaudeAgentOptions: Sendable {
     // MARK: - Tools
-    
+
     /// Tools to enable (preset or explicit list)
     public var tools: ToolsConfig?
-    
+
     /// Additional tools to allow
     public var allowedTools: [String]
-    
+
     /// Tools to disallow
     public var disallowedTools: [String]
-    
+
     // MARK: - System Prompt
-    
+
     /// System prompt for Claude
     public var systemPrompt: SystemPromptConfig?
-    
+
     // MARK: - Working Directory
-    
+
     /// Working directory for CLI
     public var cwd: String?
-    
+
     /// Explicit path to Claude CLI binary
     public var cliPath: String?
-    
+
     /// Environment variables for CLI process
     public var env: [String: String]
-    
+
     // MARK: - Permissions
-    
+
     /// Permission mode for tool execution
     public var permissionMode: PermissionMode?
-    
+
     /// Callback for tool permission decisions
     public var canUseTool: CanUseTool?
-    
+
     // MARK: - Conversation
-    
+
     /// Continue existing conversation
     public var continueConversation: Bool
-    
+
     /// Resume specific session by ID
     public var resume: String?
-    
+
     /// Fork session instead of continuing
     public var forkSession: Bool
-    
+
     /// Maximum conversation turns
     public var maxTurns: Int?
-    
+
     /// Maximum budget in USD
     public var maxBudgetUSD: Double?
-    
+
     // MARK: - Model
-    
+
     /// Claude model to use
     public var model: String?
-    
+
     /// Fallback model if primary unavailable
     public var fallbackModel: String?
-    
+
     /// Beta features to enable
     public var betas: [SdkBeta]
-    
+
     // MARK: - MCP & Tools
-    
+
     /// MCP server configurations
     public var mcpServers: [String: MCPServerConfig]
-    
+
     // MARK: - Hooks
-    
+
     /// Lifecycle hooks
     public var hooks: [HookEvent: [HookMatcher]]?
-    
+
     // MARK: - Advanced
-    
+
     /// Include partial/streaming messages
     public var includePartialMessages: Bool
-    
+
     /// Setting sources to use
     public var settings: String?
-    
+
     /// Setting sources as enum list
     public var settingSources: [SettingSource]?
-    
+
     /// Sandbox settings
     public var sandbox: SandboxSettings?
-    
+
     /// Network permissions for sandbox
     public var sandboxPermissions: NetworkPermissions?
-    
+
     /// Agent definitions for multi-agent
     public var agents: [String: AgentDefinition]?
-    
+
     /// JSON schema for structured output
     public var outputFormat: [String: AnyCodable]?
-    
+
     /// Enable file checkpointing
     public var enableFileCheckpointing: Bool
-    
+
     /// Maximum thinking tokens
     public var maxThinkingTokens: Int?
-    
+
     // MARK: - Plugins
-    
+
     /// Plugin configurations
     public var plugins: [PluginConfig]?
-    
+
     // MARK: - User
-    
+
     /// User identity for subprocess
     public var user: String?
-    
+
     // MARK: - Debugging
-    
+
     /// Callback for stderr output
     public var stderrCallback: (@Sendable (String) -> Void)?
-    
+
     /// Maximum buffer size in bytes
     public var maxBufferSize: Int?
-    
+
     /// Extra CLI arguments
     public var extraArgs: [String: String?]
-    
+
     /// Additional directories to add
     public var additionalDirectories: [String]
-    
+
     // MARK: - Initializer
-    
+
     /// Create new configuration options.
     ///
     /// All parameters have sensible defaults. Provide only the options you need to customize.
@@ -714,7 +794,7 @@ public struct ClaudeAgentOptions: Sendable {
 public enum ToolsConfig: Sendable {
     /// Use a tools preset
     case preset(ToolsPreset)
-    
+
     /// Explicit list of tool names
     case list([String])
 }
@@ -723,7 +803,7 @@ public enum ToolsConfig: Sendable {
 public enum SystemPromptConfig: Sendable {
     /// Use a system prompt preset
     case preset(SystemPromptPreset)
-    
+
     /// Custom system prompt string
     case custom(String)
 }

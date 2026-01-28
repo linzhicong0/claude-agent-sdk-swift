@@ -4,7 +4,7 @@ import Foundation
 
 /// Parser for converting raw JSON to typed Message objects
 public struct MessageParser {
-    
+
     /// Parse a raw JSON dictionary into a typed Message
     public static func parse(_ data: [String: Any]) throws -> Message {
         guard let type = data["type"] as? String else {
@@ -13,7 +13,7 @@ public struct MessageParser {
                 reason: "Missing 'type' field"
             )
         }
-        
+
         switch type {
         case "user":
             return .user(try parseUserMessage(data))
@@ -32,9 +32,9 @@ public struct MessageParser {
             )
         }
     }
-    
+
     // MARK: - User Message
-    
+
     private static func parseUserMessage(_ data: [String: Any]) throws -> UserMessage {
         guard let messageData = data["message"] as? [String: Any] else {
             throw ClaudeSDKError.messageParseError(
@@ -42,7 +42,7 @@ public struct MessageParser {
                 reason: "Missing 'message' field in user message"
             )
         }
-        
+
         let content: UserContent
         if let contentString = messageData["content"] as? String {
             content = .text(contentString)
@@ -55,16 +55,16 @@ public struct MessageParser {
                 reason: "Invalid content format in user message"
             )
         }
-        
+
         return UserMessage(
             content: content,
             uuid: data["uuid"] as? String,
             parentToolUseId: data["parent_tool_use_id"] as? String
         )
     }
-    
+
     // MARK: - Assistant Message
-    
+
     private static func parseAssistantMessage(_ data: [String: Any]) throws -> AssistantMessage {
         guard let messageData = data["message"] as? [String: Any] else {
             throw ClaudeSDKError.messageParseError(
@@ -72,30 +72,27 @@ public struct MessageParser {
                 reason: "Missing 'message' field in assistant message"
             )
         }
-        
+
         guard let contentArray = messageData["content"] as? [[String: Any]] else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing or invalid 'content' array in assistant message"
             )
         }
-        
+
         let content = try contentArray.map { try parseContentBlock($0) }
-        
-        guard let model = data["model"] as? String else {
-            throw ClaudeSDKError.messageParseError(
-                rawData: data.mapValues { AnyCodable($0) },
-                reason: "Missing 'model' field in assistant message"
-            )
-        }
-        
+
+        // Model can be in messageData (CLI output) or data (SDK format)
+        let model = (messageData["model"] as? String) ?? (data["model"] as? String) ?? "unknown"
+
         var error: AssistantMessageError?
         if let errorData = data["error"] as? [String: Any],
-           let errorType = errorData["type"] as? String,
-           let errorMessage = errorData["message"] as? String {
+            let errorType = errorData["type"] as? String,
+            let errorMessage = errorData["message"] as? String
+        {
             error = AssistantMessageError(type: errorType, message: errorMessage)
         }
-        
+
         return AssistantMessage(
             content: content,
             model: model,
@@ -103,9 +100,9 @@ public struct MessageParser {
             error: error
         )
     }
-    
+
     // MARK: - System Message
-    
+
     private static func parseSystemMessage(_ data: [String: Any]) throws -> SystemMessage {
         guard let subtype = data["subtype"] as? String else {
             throw ClaudeSDKError.messageParseError(
@@ -113,72 +110,73 @@ public struct MessageParser {
                 reason: "Missing 'subtype' field in system message"
             )
         }
-        
+
         // Everything except type and subtype goes into data
         var messageData: [String: AnyCodable] = [:]
         for (key, value) in data where key != "type" && key != "subtype" {
             messageData[key] = AnyCodable(value)
         }
-        
+
         return SystemMessage(subtype: subtype, data: messageData)
     }
-    
+
     // MARK: - Result Message
-    
+
     private static func parseResultMessage(_ data: [String: Any]) throws -> ResultMessage {
         guard let subtypeStr = data["subtype"] as? String,
-              let subtype = ResultSubtype(rawValue: subtypeStr) else {
+            let subtype = ResultSubtype(rawValue: subtypeStr)
+        else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing or invalid 'subtype' field in result message"
             )
         }
-        
+
         guard let durationMs = data["duration_ms"] as? Int else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'duration_ms' field in result message"
             )
         }
-        
+
         guard let durationApiMs = data["duration_api_ms"] as? Int else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'duration_api_ms' field in result message"
             )
         }
-        
+
         guard let isError = data["is_error"] as? Bool else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'is_error' field in result message"
             )
         }
-        
+
         guard let numTurns = data["num_turns"] as? Int else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'num_turns' field in result message"
             )
         }
-        
+
         guard let sessionId = data["session_id"] as? String else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'session_id' field in result message"
             )
         }
-        
+
         var usage: [String: AnyCodable]?
         if let usageData = data["usage"] as? [String: Any] {
             usage = usageData.mapValues { AnyCodable($0) }
         }
-        
+
         var structuredOutput: AnyCodable?
         if let output = data["structured_output"] {
             structuredOutput = AnyCodable(output)
         }
-        
+
         return ResultMessage(
             subtype: subtype,
             durationMs: durationMs,
@@ -191,9 +189,9 @@ public struct MessageParser {
             structuredOutput: structuredOutput
         )
     }
-    
+
     // MARK: - Stream Event
-    
+
     private static func parseStreamEvent(_ data: [String: Any]) throws -> StreamEvent {
         guard let uuid = data["uuid"] as? String else {
             throw ClaudeSDKError.messageParseError(
@@ -201,21 +199,21 @@ public struct MessageParser {
                 reason: "Missing 'uuid' field in stream event"
             )
         }
-        
+
         guard let sessionId = data["session_id"] as? String else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'session_id' field in stream event"
             )
         }
-        
+
         guard let event = data["event"] as? [String: Any] else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
                 reason: "Missing 'event' field in stream event"
             )
         }
-        
+
         return StreamEvent(
             uuid: uuid,
             sessionId: sessionId,
@@ -223,9 +221,9 @@ public struct MessageParser {
             parentToolUseId: data["parent_tool_use_id"] as? String
         )
     }
-    
+
     // MARK: - Content Blocks
-    
+
     private static func parseContentBlock(_ data: [String: Any]) throws -> ContentBlock {
         guard let type = data["type"] as? String else {
             throw ClaudeSDKError.messageParseError(
@@ -233,7 +231,7 @@ public struct MessageParser {
                 reason: "Missing 'type' field in content block"
             )
         }
-        
+
         switch type {
         case "text":
             guard let text = data["text"] as? String else {
@@ -243,7 +241,7 @@ public struct MessageParser {
                 )
             }
             return .text(TextBlock(text: text))
-            
+
         case "thinking":
             guard let thinking = data["thinking"] as? String else {
                 throw ClaudeSDKError.messageParseError(
@@ -258,7 +256,7 @@ public struct MessageParser {
                 )
             }
             return .thinking(ThinkingBlock(thinking: thinking, signature: signature))
-            
+
         case "tool_use":
             guard let id = data["id"] as? String else {
                 throw ClaudeSDKError.messageParseError(
@@ -278,12 +276,13 @@ public struct MessageParser {
                     reason: "Missing 'input' field in tool_use block"
                 )
             }
-            return .toolUse(ToolUseBlock(
-                id: id,
-                name: name,
-                input: input.mapValues { AnyCodable($0) }
-            ))
-            
+            return .toolUse(
+                ToolUseBlock(
+                    id: id,
+                    name: name,
+                    input: input.mapValues { AnyCodable($0) }
+                ))
+
         case "tool_result":
             guard let toolUseId = data["tool_use_id"] as? String else {
                 throw ClaudeSDKError.messageParseError(
@@ -291,22 +290,24 @@ public struct MessageParser {
                     reason: "Missing 'tool_use_id' field in tool_result block"
                 )
             }
-            
+
             var content: ToolResultContent?
             if let contentStr = data["content"] as? String {
                 content = .text(contentStr)
             } else if let contentArr = data["content"] as? [[String: Any]] {
-                content = .structured(contentArr.map { dict in
-                    dict.mapValues { AnyCodable($0) }
-                })
+                content = .structured(
+                    contentArr.map { dict in
+                        dict.mapValues { AnyCodable($0) }
+                    })
             }
-            
-            return .toolResult(ToolResultBlock(
-                toolUseId: toolUseId,
-                content: content,
-                isError: data["is_error"] as? Bool
-            ))
-            
+
+            return .toolResult(
+                ToolResultBlock(
+                    toolUseId: toolUseId,
+                    content: content,
+                    isError: data["is_error"] as? Bool
+                ))
+
         default:
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
@@ -327,6 +328,6 @@ public enum ControlMessageType: String {
 /// Check if raw data is a control message
 public func isControlMessage(_ data: [String: Any]) -> Bool {
     guard let type = data["type"] as? String else { return false }
-    return type == ControlMessageType.controlRequest.rawValue ||
-           type == ControlMessageType.controlResponse.rawValue
+    return type == ControlMessageType.controlRequest.rawValue
+        || type == ControlMessageType.controlResponse.rawValue
 }
