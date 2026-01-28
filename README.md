@@ -748,7 +748,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <p align="center">
-  <strong>Built with ❤️ by the Anthropic team</strong>
+  <strong>Built with ❤️ by Jack</strong>
   <br>
   <a href="https://github.com/anthropics/claude-agent-sdk-swift/issues">Report Bug</a>
   ·
