@@ -411,36 +411,220 @@ public struct HookMatcher: Sendable {
 
 // MARK: - MCP Configuration
 
+/// MCP server transport type.
+public enum MCPTransportType: String, Sendable, Codable {
+    /// Standard I/O transport (local process)
+    case stdio
+    /// HTTP transport (remote server)
+    case http
+    /// SSE transport (deprecated, use HTTP instead)
+    case sse
+}
+
 /// MCP server configuration - external process or SDK-embedded.
 public enum MCPServerConfig: Sendable {
-    /// External MCP server process
+    /// External MCP server (stdio or HTTP)
     case external(ExternalMCPServerConfig)
 
     /// SDK-embedded MCP server
     case sdkServer(SDKMCPServer)
+
+    // MARK: - Convenience Factory Methods
+
+    /// Create a stdio MCP server configuration.
+    ///
+    /// Use this for local MCP servers that run as subprocess commands.
+    ///
+    /// - Parameters:
+    ///   - command: Command to run (e.g., "npx", "python")
+    ///   - args: Command arguments
+    ///   - env: Environment variables
+    ///   - cwd: Working directory
+    /// - Returns: MCPServerConfig configured for stdio transport
+    ///
+    /// Example:
+    /// ```swift
+    /// // Using npx to run a filesystem server
+    /// let fsServer = MCPServerConfig.stdio(
+    ///     command: "npx",
+    ///     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/dir"]
+    /// )
+    ///
+    /// // Using Python MCP server
+    /// let pythonServer = MCPServerConfig.stdio(
+    ///     command: "python",
+    ///     args: ["-m", "mcp_server"],
+    ///     env: ["API_KEY": "secret"]
+    /// )
+    /// ```
+    public static func stdio(
+        command: String,
+        args: [String]? = nil,
+        env: [String: String]? = nil,
+        cwd: String? = nil
+    ) -> MCPServerConfig {
+        .external(
+            ExternalMCPServerConfig(
+                type: .stdio,
+                command: command,
+                args: args,
+                env: env,
+                cwd: cwd
+            ))
+    }
+
+    /// Create an HTTP MCP server configuration.
+    ///
+    /// Use this for remote MCP servers that communicate over HTTP.
+    ///
+    /// - Parameters:
+    ///   - url: The HTTP URL of the MCP server
+    ///   - headers: Optional HTTP headers (e.g., for authentication)
+    /// - Returns: MCPServerConfig configured for HTTP transport
+    ///
+    /// Example:
+    /// ```swift
+    /// // Public HTTP MCP server
+    /// let notion = MCPServerConfig.http(url: "https://mcp.notion.com/mcp")
+    ///
+    /// // HTTP MCP server with authentication
+    /// let privateApi = MCPServerConfig.http(
+    ///     url: "https://api.example.com/mcp",
+    ///     headers: ["Authorization": "Bearer your-token"]
+    /// )
+    /// ```
+    public static func http(
+        url: String,
+        headers: [String: String]? = nil
+    ) -> MCPServerConfig {
+        .external(
+            ExternalMCPServerConfig(
+                type: .http,
+                url: url,
+                headers: headers
+            ))
+    }
+
+    /// Create an SSE MCP server configuration.
+    ///
+    /// - Note: SSE transport is deprecated. Use HTTP instead where available.
+    ///
+    /// - Parameters:
+    ///   - url: The SSE URL of the MCP server
+    ///   - headers: Optional HTTP headers (e.g., for authentication)
+    /// - Returns: MCPServerConfig configured for SSE transport
+    public static func sse(
+        url: String,
+        headers: [String: String]? = nil
+    ) -> MCPServerConfig {
+        .external(
+            ExternalMCPServerConfig(
+                type: .sse,
+                url: url,
+                headers: headers
+            ))
+    }
 }
 
-/// Configuration for external MCP server process.
+/// Configuration for external MCP server (stdio or HTTP).
+///
+/// External MCP servers can be configured in two ways:
+///
+/// 1. **stdio transport**: Local process that communicates via stdin/stdout
+///    - Requires: `command` (and optionally `args`, `env`, `cwd`)
+///    - Example: `npx -y @modelcontextprotocol/server-filesystem /path`
+///
+/// 2. **HTTP transport**: Remote server that communicates via HTTP
+///    - Requires: `url` (and optionally `headers`)
+///    - Example: `https://mcp.notion.com/mcp`
+///
+/// Use the convenience factory methods on ``MCPServerConfig`` for easier creation.
 public struct ExternalMCPServerConfig: Sendable, Codable {
-    /// Command to run (e.g., "npx")
-    public let command: String
+    /// Transport type (stdio or http)
+    public let type: MCPTransportType
 
-    /// Command arguments
+    // MARK: - stdio transport properties
+
+    /// Command to run (e.g., "npx", "python") - required for stdio
+    public let command: String?
+
+    /// Command arguments - for stdio
     public let args: [String]?
 
-    /// Environment variables
+    /// Environment variables - for stdio
     public let env: [String: String]?
 
-    /// Working directory
+    /// Working directory - for stdio
     public let cwd: String?
 
+    // MARK: - HTTP transport properties
+
+    /// URL of the MCP server - required for http/sse
+    public let url: String?
+
+    /// HTTP headers (e.g., for authentication) - for http/sse
+    public let headers: [String: String]?
+
+    /// Create a stdio MCP server configuration.
+    ///
+    /// - Parameters:
+    ///   - command: Command to run (e.g., "npx")
+    ///   - args: Command arguments
+    ///   - env: Environment variables
+    ///   - cwd: Working directory
     public init(
-        command: String, args: [String]? = nil, env: [String: String]? = nil, cwd: String? = nil
+        command: String,
+        args: [String]? = nil,
+        env: [String: String]? = nil,
+        cwd: String? = nil
     ) {
+        self.type = .stdio
         self.command = command
         self.args = args
         self.env = env
         self.cwd = cwd
+        self.url = nil
+        self.headers = nil
+    }
+
+    /// Create an HTTP/SSE MCP server configuration.
+    ///
+    /// - Parameters:
+    ///   - type: Transport type (.http or .sse)
+    ///   - url: URL of the MCP server
+    ///   - headers: Optional HTTP headers
+    public init(
+        type: MCPTransportType,
+        url: String,
+        headers: [String: String]? = nil
+    ) {
+        precondition(type == .http || type == .sse, "Use init(command:...) for stdio transport")
+        self.type = type
+        self.url = url
+        self.headers = headers
+        self.command = nil
+        self.args = nil
+        self.env = nil
+        self.cwd = nil
+    }
+
+    /// Internal initializer for all properties.
+    internal init(
+        type: MCPTransportType,
+        command: String? = nil,
+        args: [String]? = nil,
+        env: [String: String]? = nil,
+        cwd: String? = nil,
+        url: String? = nil,
+        headers: [String: String]? = nil
+    ) {
+        self.type = type
+        self.command = command
+        self.args = args
+        self.env = env
+        self.cwd = cwd
+        self.url = url
+        self.headers = headers
     }
 }
 
@@ -652,6 +836,9 @@ public struct ClaudeAgentOptions: Sendable {
     /// MCP server configurations
     public var mcpServers: [String: MCPServerConfig]
 
+    /// Only use MCP servers from --mcp-config, ignoring all other MCP configurations
+    public var strictMcpConfig: Bool
+
     // MARK: - Hooks
 
     /// Lifecycle hooks
@@ -734,6 +921,7 @@ public struct ClaudeAgentOptions: Sendable {
         fallbackModel: String? = nil,
         betas: [SdkBeta] = [],
         mcpServers: [String: MCPServerConfig] = [:],
+        strictMcpConfig: Bool = false,
         hooks: [HookEvent: [HookMatcher]]? = nil,
         includePartialMessages: Bool = false,
         settings: String? = nil,
@@ -769,6 +957,7 @@ public struct ClaudeAgentOptions: Sendable {
         self.fallbackModel = fallbackModel
         self.betas = betas
         self.mcpServers = mcpServers
+        self.strictMcpConfig = strictMcpConfig
         self.hooks = hooks
         self.includePartialMessages = includePartialMessages
         self.settings = settings

@@ -20,6 +20,8 @@ struct ClaudeSDKExample {
                 await streamingClientExample()
             case "mcp":
                 await mcpServerExample()
+            case "external-mcp":
+                await externalMCPExample()
             case "hooks":
                 await hooksExample()
             case "permissions":
@@ -40,11 +42,12 @@ struct ClaudeSDKExample {
             Usage: claude-sdk-example <example>
 
             Available examples:
-              simple      - Simple one-shot query
-              streaming   - Streaming client with multi-turn
-              mcp         - SDK MCP server with custom tools
-              hooks       - Lifecycle hooks
-              permissions - Tool permission callbacks
+              simple       - Simple one-shot query
+              streaming    - Streaming client with multi-turn
+              mcp          - SDK MCP server with custom tools (requires CLI support)
+              external-mcp - External MCP servers (stdio and HTTP)
+              hooks        - Lifecycle hooks
+              permissions  - Tool permission callbacks
             """)
     }
 }
@@ -247,6 +250,144 @@ func mcpServerExample() async {
         print("❌ Error: \(error.localizedDescription)")
         await client.close()
     }
+}
+
+// MARK: - External MCP Server Example
+
+func externalMCPExample() async {
+    print("🌐 External MCP Server Example")
+    print("------------------------------\n")
+
+    print("This example demonstrates configuring external MCP servers using")
+    print("the Python FastMCP calculator server included in examples/\n")
+
+    // Get the path to the calculator server
+    let cwd = FileManager.default.currentDirectoryPath
+    let calculatorPath = "\(cwd)/examples/calculator_mcp_server.py"
+
+    // Check if the calculator server exists
+    guard FileManager.default.fileExists(atPath: calculatorPath) else {
+        print("❌ Calculator server not found at: \(calculatorPath)")
+        print("   Make sure you're running from the project root directory.")
+        return
+    }
+
+    print("Using Python FastMCP calculator server:")
+    print("  Path: \(calculatorPath)")
+    print("")
+
+    // Configure the SDK with the Python MCP server
+    // Note: Use the correct Python path that has fastmcp installed
+    let options = ClaudeAgentOptions(
+        cwd: cwd,
+        permissionMode: .bypassPermissions,
+        maxTurns: 5,
+        mcpServers: [
+            // Python MCP calculator server using FastMCP
+            // Uses python3.11 which has fastmcp installed
+            "calc": .stdio(
+                command: "/opt/local/bin/python3.11",
+                args: [calculatorPath]
+            )
+        ]
+    )
+
+    print("MCP server configured:")
+    print("  - calc (stdio): python3 calculator_server.py")
+    print(
+        "  - Tools available: mcp__calc__add, mcp__calc__subtract, mcp__calc__multiply, mcp__calc__divide"
+    )
+    print("")
+
+    do {
+        print("Asking Claude to perform calculations using the MCP tools...\n")
+
+        for try await message in query(
+            prompt:
+                "Use the calculator MCP tools to compute: 15 + 27, and then multiply the result by 2. Show your work.",
+            options: options
+        ) {
+            switch message {
+            case .assistant(let msg):
+                // Show tool calls and text
+                for block in msg.content {
+                    if case .toolUse(let tool) = block {
+                        print("🔧 Tool call: \(tool.name)")
+                        // Convert AnyCodable input to JSON-serializable format
+                        let serializableInput = tool.input.mapValues { $0.value }
+                        if JSONSerialization.isValidJSONObject(serializableInput),
+                            let input = try? JSONSerialization.data(
+                                withJSONObject: serializableInput),
+                            let inputStr = String(data: input, encoding: .utf8)
+                        {
+                            print("   Input: \(inputStr)")
+                        } else {
+                            print("   Input: \(tool.input)")
+                        }
+                    } else if case .text(let text) = block {
+                        print("Claude: \(text.text)")
+                    }
+                }
+
+            case .user(let msg):
+                // Show tool results
+                if msg.parentToolUseId != nil {
+                    switch msg.content {
+                    case .blocks(let blocks):
+                        for block in blocks {
+                            if case .toolResult(let result) = block {
+                                if let content = result.content {
+                                    switch content {
+                                    case .text(let text):
+                                        print("   ↳ Result: \(text)")
+                                    case .structured(let data):
+                                        print("   ↳ Result: \(data)")
+                                    }
+                                }
+                            }
+                        }
+                    case .text(let text):
+                        print("   ↳ Result: \(text)")
+                    }
+                }
+
+            case .result(let result):
+                print("\n✅ Calculation completed!")
+                print("   Turns: \(result.numTurns)")
+                if let cost = result.totalCostUSD {
+                    print("   Cost: $\(String(format: "%.4f", cost))")
+                }
+
+            default:
+                break
+            }
+        }
+    } catch {
+        print("❌ Error: \(error.localizedDescription)")
+        print("")
+        print("Common issues:")
+        print("  - Python3 not installed or not in PATH")
+        print("  - Calculator server has syntax errors")
+        print("  - MCP server initialization timeout")
+    }
+
+    print("")
+    print("📚 How to configure MCP servers in your code:")
+    print("")
+    print("// Python MCP server (stdio)")
+    print("MCPServerConfig.stdio(")
+    print("    command: \"python3\",")
+    print("    args: [\"/path/to/server.py\"]")
+    print(")")
+    print("")
+    print("// HTTP MCP server")
+    print("MCPServerConfig.http(url: \"https://mcp.example.com/mcp\")")
+    print("")
+    print("// HTTP with authentication")
+    print("MCPServerConfig.http(")
+    print("    url: \"https://api.example.com/mcp\",")
+    print("    headers: [\"Authorization\": \"Bearer token\"]")
+    print(")")
 }
 
 // MARK: - Hooks Example

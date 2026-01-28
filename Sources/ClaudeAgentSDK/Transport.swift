@@ -394,6 +394,11 @@ public actor SubprocessCLITransport: TransportProtocol {
             let jsonData = try JSONSerialization.data(withJSONObject: externalMCPConfig)
             let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
             args.append(contentsOf: ["--mcp-config", jsonString])
+
+            // If strict mode, only use servers from --mcp-config
+            if options.strictMcpConfig {
+                args.append("--strict-mcp-config")
+            }
         }
 
         // Agents
@@ -446,10 +451,35 @@ public actor SubprocessCLITransport: TransportProtocol {
 
         for (name, serverConfig) in options.mcpServers {
             if case .external(let external) = serverConfig {
-                var serverDict: [String: Any] = ["command": external.command]
-                if let args = external.args { serverDict["args"] = args }
-                if let env = external.env { serverDict["env"] = env }
-                if let cwd = external.cwd { serverDict["cwd"] = cwd }
+                var serverDict: [String: Any] = [:]
+
+                switch external.type {
+                case .stdio:
+                    // stdio transport: command, args, env, cwd
+                    if let command = external.command {
+                        serverDict["command"] = command
+                    }
+                    if let args = external.args {
+                        serverDict["args"] = args
+                    }
+                    if let env = external.env {
+                        serverDict["env"] = env
+                    }
+                    if let cwd = external.cwd {
+                        serverDict["cwd"] = cwd
+                    }
+
+                case .http, .sse:
+                    // HTTP/SSE transport: type, url, headers
+                    serverDict["type"] = external.type.rawValue
+                    if let url = external.url {
+                        serverDict["url"] = url
+                    }
+                    if let headers = external.headers {
+                        serverDict["headers"] = headers
+                    }
+                }
+
                 servers[name] = serverDict
             } else if case .sdkServer(let server) = serverConfig {
                 // SDK servers use special "sdk://" transport
