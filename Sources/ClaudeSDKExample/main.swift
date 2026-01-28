@@ -185,6 +185,8 @@ func mcpServerExample() async {
             },
         ])
 
+    // SDK MCP servers require streaming mode (ClaudeSDKClient) because they
+    // are registered via the control protocol during initialization
     let options = ClaudeAgentOptions(
         allowedTools: ["mcp__calc__add", "mcp__calc__multiply"],
         cwd: FileManager.default.currentDirectoryPath,
@@ -194,13 +196,23 @@ func mcpServerExample() async {
 
     print("Calculator tools available:")
     print("  - mcp__calc__add")
-    print("  - mcp__calc__multiply\n")
+    print("  - mcp__calc__multiply")
+    print("")
+    print("⚠️  Note: SDK MCP servers require CLI support for the control protocol's")
+    print("   'sdkMcpServers' capability. If the tools are not available, your CLI")
+    print("   version may not support this feature yet.\n")
+
+    // Use ClaudeSDKClient (streaming mode) for SDK MCP servers
+    let client = ClaudeSDKClient(options: options)
 
     do {
-        for try await message in query(
-            prompt: "Use the calculator tool to compute 15 + 27 and 6 × 8",
-            options: options
-        ) {
+        print("Connecting...")
+        try await client.connect()
+        print("Connected!\n")
+
+        try await client.query(prompt: "Use the calculator tool to compute 15 + 27 and 6 × 8")
+
+        for try await message in client.receiveUntilResult() {
             switch message {
             case .assistant(let msg):
                 // Show tool calls
@@ -213,6 +225,12 @@ func mcpServerExample() async {
                     }
                 }
 
+            case .user(let msg):
+                // Show tool results
+                if msg.parentToolUseId != nil {
+                    print("   ↳ Tool result received")
+                }
+
             case .result(let result):
                 print("\n✅ Done!")
                 if let cost = result.totalCostUSD {
@@ -223,8 +241,11 @@ func mcpServerExample() async {
                 break
             }
         }
+
+        await client.close()
     } catch {
         print("❌ Error: \(error.localizedDescription)")
+        await client.close()
     }
 }
 

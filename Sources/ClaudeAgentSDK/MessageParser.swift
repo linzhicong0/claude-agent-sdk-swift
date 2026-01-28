@@ -123,12 +123,18 @@ public struct MessageParser {
     // MARK: - Result Message
 
     private static func parseResultMessage(_ data: [String: Any]) throws -> ResultMessage {
-        guard let subtypeStr = data["subtype"] as? String,
-            let subtype = ResultSubtype(rawValue: subtypeStr)
-        else {
+        guard let subtypeStr = data["subtype"] as? String else {
             throw ClaudeSDKError.messageParseError(
                 rawData: data.mapValues { AnyCodable($0) },
-                reason: "Missing or invalid 'subtype' field in result message"
+                reason: "Missing 'subtype' field in result message"
+            )
+        }
+
+        guard let subtype = ResultSubtype(rawValue: subtypeStr) else {
+            throw ClaudeSDKError.messageParseError(
+                rawData: data.mapValues { AnyCodable($0) },
+                reason:
+                    "Invalid 'subtype' value '\(subtypeStr)' in result message. Expected: success, done, error, or interrupted"
             )
         }
 

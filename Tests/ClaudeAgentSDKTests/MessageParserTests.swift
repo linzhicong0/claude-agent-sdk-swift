@@ -483,4 +483,68 @@ final class MessageParserTests: XCTestCase {
             XCTFail("Expected assistant message")
         }
     }
+
+    func testParseResultMessageMissingSubtype() {
+        let data: [String: Any] = [
+            "type": "result",
+            // Missing "subtype" field
+            "duration_ms": 1000,
+            "duration_api_ms": 800,
+            "is_error": false,
+            "num_turns": 1,
+            "session_id": "session-123",
+        ]
+
+        XCTAssertThrowsError(try MessageParser.parse(data)) { error in
+            guard case ClaudeSDKError.messageParseError(_, let reason) = error else {
+                XCTFail("Expected messageParseError")
+                return
+            }
+            XCTAssertTrue(reason.contains("Missing 'subtype' field"))
+        }
+    }
+
+    func testParseResultMessageInvalidSubtype() {
+        let data: [String: Any] = [
+            "type": "result",
+            "subtype": "unknown_subtype",  // Invalid subtype value
+            "duration_ms": 1000,
+            "duration_api_ms": 800,
+            "is_error": false,
+            "num_turns": 1,
+            "session_id": "session-123",
+        ]
+
+        XCTAssertThrowsError(try MessageParser.parse(data)) { error in
+            guard case ClaudeSDKError.messageParseError(_, let reason) = error else {
+                XCTFail("Expected messageParseError")
+                return
+            }
+            XCTAssertTrue(reason.contains("Invalid 'subtype' value 'unknown_subtype'"))
+        }
+    }
+
+    func testParseResultMessageSuccessSubtype() throws {
+        // Test the "success" subtype (API variant)
+        let data: [String: Any] = [
+            "type": "result",
+            "subtype": "success",
+            "duration_ms": 2500,
+            "duration_api_ms": 2000,
+            "is_error": false,
+            "num_turns": 3,
+            "session_id": "session-789",
+            "total_cost_usd": 0.0250,
+        ]
+
+        let message = try MessageParser.parse(data)
+
+        guard case .result(let resultMsg) = message else {
+            XCTFail("Expected result message")
+            return
+        }
+
+        XCTAssertEqual(resultMsg.subtype, .success)
+        XCTAssertEqual(resultMsg.numTurns, 3)
+    }
 }
